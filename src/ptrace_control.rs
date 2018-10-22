@@ -13,6 +13,15 @@ type DataType = nix::libc::c_int;
 #[cfg(target_os = "linux")]
 type DataType = *mut c_void;
 
+#[cfg(target_os = "macos")]
+const POKE_USER:Request = RequestType::PT_WRITE_U;
+#[cfg(target_os = "linux")]
+const POKE_USER:Request = Request::PTRACE_POKEUSER;
+#[cfg(target_os = "macos")]
+const PEEK_USER:Request = RequestType::PT_READ_U;
+#[cfg(target_os = "linux")]
+const PEEK_USER:Request = Request::PTRACE_PEEKUSER;
+
 pub fn trace_children(pid: Pid) -> Result<()> {
     //TODO need to check support.
     let options: Options = Options::PTRACE_O_TRACESYSGOOD |
@@ -48,7 +57,7 @@ pub fn write_to_address(pid: Pid,
 pub fn current_instruction_pointer(pid: Pid) -> Result<c_long> {
     let ret = unsafe {
         Errno::clear();
-        libc::ptrace(Request::PTRACE_PEEKUSER as RequestType, libc::pid_t::from(pid), RIP as * mut c_void, 0 as DataType)
+        libc::ptrace(PEEK_USER as RequestType, libc::pid_t::from(pid), RIP as AddressType, 0 as DataType)
     };
     match Errno::result(ret) {
         Ok(..) | Err(Error::Sys(Errno::UnknownErrno)) => Ok(ret),
@@ -60,7 +69,7 @@ pub fn current_instruction_pointer(pid: Pid) -> Result<c_long> {
 pub fn set_instruction_pointer(pid: Pid, pc: u64) -> Result<()> {
     unsafe {
         Errno::clear();
-        Errno::result(libc::ptrace(Request::PTRACE_POKEUSER as RequestType, libc::pid_t::from(pid), RIP as AddressType, pc as DataType)).map(|_|())
+        Errno::result(libc::ptrace(POKE_USER as RequestType, libc::pid_t::from(pid), RIP as AddressType, pc as DataType)).map(|_|())
     }
 }
 
