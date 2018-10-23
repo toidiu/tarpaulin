@@ -8,7 +8,7 @@ use nix::Result;
 use nix::unistd::Pid;
 use breakpoint::*;
 use traces::*;
-use ptrace_control::*;
+use tracing::*;
 use config::Config;
 
 

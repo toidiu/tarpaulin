@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use nix::unistd::Pid;
 use nix::{Result, Error};
-use ptrace_control::*;
+use tracing::*;
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 const INT: u64 = 0xCC;
