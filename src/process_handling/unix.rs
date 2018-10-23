@@ -52,7 +52,7 @@ pub fn current_instruction_pointer(pid: Pid) -> Result<c_long> {
         libc::ptrace(PEEK_USER as RequestType, libc::pid_t::from(pid), RIP as AddressType, 0 as DataType)
     };
     match Errno::result(ret) {
-        Ok(..) | Err(Error::Sys(Errno::UnknownErrno)) => Ok(ret),
+        Ok(..) | Err(Error::Sys(Errno::UnknownErrno)) => Ok(ret.into()),
         err @ Err(..) => err,
     }
 }

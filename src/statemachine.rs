@@ -228,7 +228,11 @@ impl <'a> StateData for LinuxData<'a> {
 
 
     fn wait(&mut self) -> Option<TestState> {
-        let wait = waitpid(Pid::from_raw(-1), Some(WaitPidFlag::WNOHANG | WaitPidFlag::__WALL));
+        #[cfg(target_os = "macos")]
+        let wait_flag: WaitPidFlag = WaitPidFlag::WNOHANG;
+        #[cfg(target_os = "linux")]
+        let wait_flag: WaitPidFlag = WaitPidFlag::WNOHANG | WaitPidFlag::__WALL;
+        let wait = waitpid(Pid::from_raw(-1), Some(wait_flag));
         match wait {
             Ok(WaitStatus::StillAlive) => {
                 self.wait = WaitStatus::StillAlive;
@@ -248,6 +252,7 @@ impl <'a> StateData for LinuxData<'a> {
 
     fn stop(&mut self) -> TestState {
         match self.wait {
+            #[cfg(target_os = "linux")]
             WaitStatus::PtraceEvent(c,s,e) => {
                 match self.handle_ptrace_event(c, s, e) {
                     Ok(s) => s,
