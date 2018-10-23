@@ -14,11 +14,11 @@ type DataType = nix::libc::c_int;
 type DataType = *mut c_void;
 
 #[cfg(target_os = "macos")]
-const POKE_USER:Request = RequestType::PT_WRITE_U;
+const POKE_USER:Request = Request::PT_WRITE_U;
 #[cfg(target_os = "linux")]
 const POKE_USER:Request = Request::PTRACE_POKEUSER;
 #[cfg(target_os = "macos")]
-const PEEK_USER:Request = RequestType::PT_READ_U;
+const PEEK_USER:Request = Request::PT_READ_U;
 #[cfg(target_os = "linux")]
 const PEEK_USER:Request = Request::PTRACE_PEEKUSER;
 
