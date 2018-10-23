@@ -338,6 +338,7 @@ impl <'a>LinuxData<'a> {
         }
     }
 
+    #[cfg(target_os = "linux")]
     fn handle_ptrace_event(&mut self, child: Pid, sig: Signal, event: i32) -> Result<TestState> {
         use nix::libc::*;
 
@@ -373,6 +374,13 @@ impl <'a>LinuxData<'a> {
             Ok(TestState::Unrecoverable)
         }
     }
+
+    #[cfg(target_os = "macos")]
+    fn handle_ptrace_event(&mut self, child: Pid, sig: Signal, event: i32) -> Result<TestState> {
+        println!("Wasn't expecting this to happen in OSX signal {:?} event {}", sig, event);
+        Ok(TestState::Unrecoverable)
+    }
+
 
     fn collect_coverage_data(&mut self) -> Result<TestState> {
         if let Ok(rip) = current_instruction_pointer(self.current) {
