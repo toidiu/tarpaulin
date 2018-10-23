@@ -53,7 +53,7 @@ pub fn current_instruction_pointer(pid: Pid) -> Result<c_long> {
     };
     match Errno::result(ret) {
         Ok(..) | Err(Error::Sys(Errno::UnknownErrno)) => Ok(ret.into()),
-        err @ Err(..) => err,
+        err @ Err(..) => err.map(|x| x as c_long),
     }
 }
 
