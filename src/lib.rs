@@ -37,15 +37,18 @@ mod statemachine;
 mod source_analysis;
 
 /// Should be unnecessary with a future nix crate release.
+#[cfg(target_os = "linux")]
 mod personality;
-mod tracing;
+mod process_handling;
 
 use config::*;
 use test_loader::*;
-use tracing::*;
+use process_handling::*;
 use statemachine::*;
 use traces::*;
 
+#[cfg(target_os = "linux")]
+use personality::disable_aslr;
 
 /// Error states that could be returned from tarpaulin
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -63,6 +66,10 @@ pub enum RunError {
     
 }
 
+#[cfg(target_os="macos")]
+fn disable_aslr() -> nix::Result<i32> {
+    Ok(1)
+}
 
 pub fn run(config: &Config) -> Result<(), RunError> {
     let (result, tp) = launch_tarpaulin(config)?;
@@ -340,7 +347,7 @@ fn collect_coverage(project: &Workspace,
 /// Launches the test executable
 fn execute_test(test: &Path, package: &Package, ignored: bool, config: &Config) {
     let exec_path = CString::new(test.to_str().unwrap()).unwrap();
-    match personality::disable_aslr() {
+    match disable_aslr() {
         Ok(_) => {},
         Err(e) => println!("ASLR disable failed: {}", e),
     }
