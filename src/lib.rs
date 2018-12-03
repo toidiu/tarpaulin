@@ -36,9 +36,6 @@ pub mod traces;
 mod statemachine;
 mod source_analysis;
 
-/// Should be unnecessary with a future nix crate release.
-#[cfg(target_os = "linux")]
-mod personality;
 mod process_handling;
 
 use config::*;
@@ -47,8 +44,6 @@ use process_handling::*;
 use statemachine::*;
 use traces::*;
 
-#[cfg(target_os = "linux")]
-use personality::disable_aslr;
 
 /// Error states that could be returned from tarpaulin
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -343,12 +338,9 @@ fn collect_coverage(project: &Workspace,
 /// Launches the test executable
 fn execute_test(test: &Path, package: &Package, ignored: bool, config: &Config) {
     let exec_path = CString::new(test.to_str().unwrap()).unwrap();
-    match disable_aslr() {
-        Ok(_) => {},
-        Err(e) => println!("ASLR disable failed: {}", e),
-    }
-    request_trace().expect("Failed to trace");
+    
     println!("running {}", test.display());
+    
     if let Some(parent) = package.manifest_path().parent() {
         let _ = env::set_current_dir(parent);
     }
@@ -374,7 +366,7 @@ fn execute_test(test: &Path, package: &Package, ignored: bool, config: &Config) 
     for s in &config.varargs {
         argv.push(CString::new(s.as_bytes()).unwrap_or_default());
     }
-    execve(&exec_path, &argv, envars.as_slice())
-        .unwrap();
+
+    execute(exec_path, &argv, &envars);
 }
 
