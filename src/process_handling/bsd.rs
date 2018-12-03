@@ -17,7 +17,7 @@ pub fn get_event_data(pid: Pid) -> Result<c_long> {
 
 pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
     unsafe {
-        let attr: posix_spawnattr_t = std::uninitialized();
+        let attr: posix_spawnattr_t = uninitialized();
         let res = posix_spawnattr_init(&attr);
         if res != 0 {
             println!("Can't initialize posix_spawnattr_t");

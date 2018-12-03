@@ -48,8 +48,8 @@ impl Breakpoint {
     pub fn enable(&mut self, pid: Pid) -> Result<()> {
         let data  = read_address(pid, self.aligned_address())?;
         self.is_running.insert(pid, true);
-        let mut intdata = data & (!(0xFFu64 << self.shift) as i64);
-        intdata |= (INT << self.shift) as i64;
+        let mut intdata = data & (!(0xFFu64 << self.shift) as ReadType);
+        intdata |= (INT << self.shift) as ReadType;
         if data == intdata {
             Err(Error::UnsupportedOperation)
         } else {
@@ -60,8 +60,8 @@ impl Breakpoint {
     fn disable(&self, pid: Pid) -> Result<()> {
         // I require the bit fiddlin this end.
         let data = read_address(pid, self.aligned_address())?;
-        let mut orgdata = data & (!(0xFFu64 << self.shift) as i64);
-        orgdata |= i64::from(self.data) << self.shift;
+        let mut orgdata = data & (!(0xFFu64 << self.shift) as ReadType);
+        orgdata |= ReadType::from(self.data) << self.shift;
         write_to_address(pid, self.aligned_address(), orgdata)
     }
 
