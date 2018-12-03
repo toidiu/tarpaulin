@@ -13,9 +13,9 @@ type DataType = nix::libc::c_int;
 type DataType = *mut nix::libc::c_void;
 
 #[cfg(target_os = "macos")]
-type ReadType = nix::libc::c_int;
+pub type ReadType = nix::libc::c_int;
 #[cfg(target_os = "linux")]
-type ReadType = nix::libc::c_long;
+pub type ReadType = nix::libc::c_long;
 
 #[cfg(target_os = "macos")]
 const POKE_USER:Request = Request::PT_WRITE_U;
@@ -45,7 +45,7 @@ pub fn read_address(pid: Pid, address:u64) -> Result<ReadType> {
 
 pub fn write_to_address(pid: Pid,
                         address: u64,
-                        data: i64) -> Result<()> {
+                        data: ReadType) -> Result<()> {
     write(pid, address as AddressType, data as DataType)
 }
 
