@@ -1,8 +1,10 @@
 use std::ffi::CString;
+use std::ptr;
+use std::mem::uninitialized;
 use nix::libc::c_long;
 use nix::unistd::Pid;
 use nix::Result;
-use libc::*;
+use nix::libc::*;
 
 pub fn trace_children(pid: Pid) -> Result<()> {
     Ok(())
