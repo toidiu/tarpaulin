@@ -28,6 +28,23 @@ pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
         if res != 0 {
             println!("Couldn't set spawn flags");
         }
-        posix_spawnp(ptr::null_mut(), prog, ptr::null_mut(), &attr, argv, envar);
+
+        let mut args: Vec<*const c_char> = argv.iter()
+            .map(|s| s.as_ptr())
+            .collect();
+        
+        args.push(ptr::null());
+
+        let envs: Vec<*const c_char> = envar.iter()
+            .map(|s| s.as_ptr())
+            .collect();
+
+        envs.push(ptr::null());
+        posix_spawnp(ptr::null_mut(), 
+                     prog.as_ptr(), 
+                     ptr::null_mut(), 
+                     &attr, 
+                     args.as_ptr(), 
+                     envs.as_ptr());
     }
 }
