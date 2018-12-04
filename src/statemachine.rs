@@ -251,6 +251,7 @@ impl <'a> StateData for LinuxData<'a> {
 
 
     fn stop(&mut self) -> TestState {
+        println!("Wait state is {:?}", self.wait);
         match self.wait {
             #[cfg(target_os = "linux")]
             WaitStatus::PtraceEvent(c,s,e) => {
