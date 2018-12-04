@@ -67,5 +67,7 @@ pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
                      &attr, 
                      args.as_ptr(), 
                      envs.as_ptr());
+
+        println!("If I hit here something has gone wrong");
     }
 }

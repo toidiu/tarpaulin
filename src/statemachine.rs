@@ -175,7 +175,8 @@ impl <'a> StateData for LinuxData<'a> {
                 Some(TestState::Initialise)
             },
             Ok(e) => {
-                println!("Unexpected signal when starting test {:?}", e);
+                println!("Unexpected signal when starting test {:?}\nAttempting to continue", e);
+                continue_exec(e.pid().unwrap(), None)?;
                 None
             },
             Err(e) => {
