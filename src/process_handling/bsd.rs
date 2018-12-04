@@ -2,15 +2,15 @@ use process_handling::unix::ReadType;
 use std::ffi::CString;
 use std::ptr;
 use std::mem::uninitialized;
-use nix::libc::c_long;
 use nix::unistd::Pid;
 use nix::Result;
+use nix::errno::Errno;
 use nix::libc::*;
 
-const PTRACE_SETOPTIONS: DataType = 0x4200;
-const PTRACE_GETEVENTMSG: DataType = 0x4201;
+const PTRACE_SETOPTIONS: ReadType = 0x4200;
+const PTRACE_GETEVENTMSG: ReadType = 0x4201;
 
-const PTRACE_OPTIONS: DataType = 0x7F;
+const PTRACE_OPTIONS: ReadType = 0x7F;
 
 
 
