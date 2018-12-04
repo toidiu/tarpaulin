@@ -1,3 +1,4 @@
+use process_handling::unix::ReadType;
 use std::ffi::CString;
 use nix::sys::ptrace::*;
 use nix::libc::{c_long, c_int};
@@ -61,7 +62,7 @@ pub fn trace_children(pid: Pid) -> Result<()> {
     setoptions(pid, options)
 }
 
-pub fn get_event_data(pid: Pid) -> Result<c_long> {
+pub fn get_event_data(pid: Pid) -> Result<ReadType> {
     getevent(pid)
 }
 
