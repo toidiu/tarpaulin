@@ -1,3 +1,4 @@
+use process_handling::unix::ReadType;
 use std::ffi::CString;
 use std::ptr;
 use std::mem::uninitialized;
@@ -6,12 +7,31 @@ use nix::unistd::Pid;
 use nix::Result;
 use nix::libc::*;
 
+const PTRACE_SETOPTIONS: DataType = 0x4200;
+const PTRACE_GETEVENTMSG: DataType = 0x4201;
+
+const PTRACE_OPTIONS: DataType = 0x7F;
+
+
+
 pub fn trace_children(pid: Pid) -> Result<()> {
-    Ok(())
+    // The options exist they're just hidden
+    let res = unsafe {
+        libc::ptrace(PTRACE_SETOPTIONS,
+                     libc::pid_t::from(pid),
+                     ptr::null_mut(),
+                     PTRACE_OPTIONS)
+    };
+    Errno::result(res).map(drop)
 }
 
-pub fn get_event_data(pid: Pid) -> Result<c_long> {
-    Ok(-1)
+pub fn get_event_data(pid: Pid) -> Result<ReadType> {
+    unsafe {
+        libc::ptrace(PTRACE_GETEVENTMSG,
+                     libc::pid_t::from(pid),
+                     ptr::null_mut(),
+                     0)
+    }
 }
 
 
