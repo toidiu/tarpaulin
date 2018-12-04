@@ -176,8 +176,11 @@ impl <'a> StateData for LinuxData<'a> {
             },
             Ok(e) => {
                 println!("Unexpected signal when starting test {:?}\nAttempting to continue", e);
-                continue_exec(e.pid().unwrap(), None)?;
-                None
+                if continue_exec(e.pid().unwrap(), None).is_ok() {
+                    None
+                } else {
+                    Some(TestState::Unrecoverable)
+                }
             },
             Err(e) => {
                 println!("Error when starting test: {}", e);
