@@ -61,10 +61,6 @@ pub enum RunError {
     
 }
 
-#[cfg(target_os="macos")]
-fn disable_aslr() -> nix::Result<i32> {
-    Ok(1)
-}
 
 pub fn run(config: &Config) -> Result<(), RunError> {
     let (result, tp) = launch_tarpaulin(config)?;
