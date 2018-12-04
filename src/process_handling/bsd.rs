@@ -22,7 +22,7 @@ pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
         if res != 0 {
             println!("Can't initialize posix_spawnattr_t");
         }
-        let flags = POSIX_SPAWN_SETEXEC | 0x0100;
+        let flags: i16 = POSIX_SPAWN_SETEXEC | 0x0100;
 
         let res = posix_spawnattr_setflags(&mut attr, flags);
         if res != 0 {
@@ -35,13 +35,13 @@ pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
         
         args.push(ptr::null());
 
-        let envs: Vec<*const c_char> = envar.iter()
-            .map(|s| s.as_ptr())
+        let envs: Vec<*mut c_char> = envar.iter()
+            .map(|s| s.into_raw())
             .collect();
 
         envs.push(ptr::null());
         posix_spawnp(ptr::null_mut(), 
-                     prog.as_ptr(), 
+                     prog.into_raw(), 
                      ptr::null_mut(), 
                      &attr, 
                      args.as_ptr(), 
