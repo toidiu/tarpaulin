@@ -174,8 +174,8 @@ impl <'a> StateData for LinuxData<'a> {
                 self.wait = sig;
                 Some(TestState::Initialise)
             },
-            Ok(_) => {
-                println!("Unexpected signal when starting test");
+            Ok(e) => {
+                println!("Unexpected signal when starting test {:?}", e);
                 None
             },
             Err(e) => {
