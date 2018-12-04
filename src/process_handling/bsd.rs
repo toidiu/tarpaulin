@@ -26,12 +26,13 @@ pub fn trace_children(pid: Pid) -> Result<()> {
 }
 
 pub fn get_event_data(pid: Pid) -> Result<ReadType> {
-    unsafe {
+    let r = unsafe {
         libc::ptrace(PTRACE_GETEVENTMSG,
                      libc::pid_t::from(pid),
                      ptr::null_mut(),
                      0)
-    }
+    };
+    Ok(r)
 }
 
 
