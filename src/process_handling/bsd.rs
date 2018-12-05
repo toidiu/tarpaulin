@@ -2,7 +2,7 @@ use process_handling::unix::*;
 use std::ffi::CString;
 use std::ptr;
 use std::mem::uninitialized;
-use nix::unistd::{Gid, Pid};
+use nix::unistd::{Gid, Pid, getegid};
 use nix::Result;
 use nix::errno::Errno;
 use nix::libc::*;
@@ -42,7 +42,7 @@ pub fn get_event_data(pid: Pid) -> Result<ReadType> {
 
 pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
     unsafe {
-        let egid_stat = setegid(Gid.current().as_raw());
+        let egid_stat = setegid(getegid().as_raw());
         if(egid_stat < 0) {
             println!("Error setting egid");
         }
