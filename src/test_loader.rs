@@ -106,6 +106,7 @@ fn get_entry_points<R, Offset>(debug_info: &CompilationUnitHeader<R, Offset>,
     where R: Reader<Offset = Offset>,
           Offset: ReaderOffset
 {
+    println!("Getting the entry points");
     let mut result:Vec<FuncDesc> = Vec::new();
     let mut cursor = debug_info.entries(debug_abbrev);
     // skip compilation unit root.
@@ -131,11 +132,13 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
 {
     let ( cprog, seq) = prog.sequences()?;
     for s in seq {
+        println!("Checking sequence");
         let mut temp_map: HashMap<SourceLocation, TracerData> = HashMap::new();
         let mut sm = cprog.resume_from(&s);
-         while let Ok(Some((header, &ln_row))) = sm.next_row() {
-             // If this row isn't useful move on
+         while let Ok(Some((header, &ln_row))) = sm.next_row() { 
+            // If this row isn't useful move on
             if !ln_row.is_stmt() || ln_row.line().is_none() {
+                println!("Row isn't statement so continuing");
                 continue;
             }
             if let Some(file) = ln_row.file(header) {
@@ -167,6 +170,7 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
                             path.push(file.as_ref());
                             if !path.is_file() {
                                 // Not really a source file!
+                                println!("Not source");
                                 continue;
                             }
                             let address = ln_row.address();
@@ -189,6 +193,8 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
                         }
                     }
                 }
+            } else {
+                println!("Didn't get file");
             }
         }
         for (k, v) in &temp_map {
@@ -222,6 +228,7 @@ fn get_line_addresses(endian: RunTimeEndian,
 
     let mut iter = debug_info.units();
     while let Ok(Some(cu)) = iter.next() {
+        println!("Processing compilation units");
         let addr_size = cu.address_size();
         let abbr = match cu.abbreviations(&debug_abbrev) {
             Ok(a) => a,
@@ -244,6 +251,7 @@ fn get_line_addresses(endian: RunTimeEndian,
             };
             let prog = debug_line.program(offset, addr_size, None, None)?;
             let mut temp_map : HashMap<SourceLocation, Vec<TracerData>> = HashMap::new();
+            println!("Getting addresses");
             if let Err(e) = get_addresses_from_program(prog, &entries, project, &mut temp_map) {
                 if config.verbose {
                     println!("Potential issue reading test addresses {}", e);
@@ -274,9 +282,10 @@ fn get_line_addresses(endian: RunTimeEndian,
             }
         }
     }
-
+    println!("Processed all compilation units");
     for (file, ref line_analysis) in analysis.iter() {
         if config.exclude_path(file) {
+            println!("Excluding");
             continue;
         }
         for line in &line_analysis.cover {
@@ -301,6 +310,7 @@ pub fn generate_tracemap(project: &Workspace, test: &Path, config: &Config) -> i
         MmapOptions::new().map(&file)?
     };
     if let Ok(obj) = OFile::parse(&*file) {
+        println!("Getting line analysis");
         let analysis = get_line_analysis(project, config);
         let endian = if obj.is_little_endian() {
             RunTimeEndian::Little
