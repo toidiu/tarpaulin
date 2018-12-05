@@ -218,6 +218,7 @@ impl <'a> StateData for LinuxData<'a> {
                         self.error_message = Some("Failed to instrument test executable".to_string());
                     },
                 }
+                println!("Finished instrumenting code");
             }
         }
         if !instrumented {
