@@ -1,4 +1,4 @@
-use process_handling::unix::ReadType;
+use process_handling::unix::*;
 use std::ffi::CString;
 use std::ptr;
 use std::mem::uninitialized;
@@ -11,8 +11,6 @@ const PTRACE_SETOPTIONS: ReadType = 0x4200;
 const PTRACE_GETEVENTMSG: ReadType = 0x4201;
 
 const PTRACE_OPTIONS: ReadType = 0x7F;
-
-
 
 
 pub fn trace_children(pid: Pid) -> Result<()> {
