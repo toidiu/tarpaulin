@@ -157,7 +157,7 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
                 } else {
                     path.starts_with(project.join("target"))
                 };
-                
+                println!("path is {}", path.display()); 
                 // Source is part of project so we cover it.
                 if !is_target && path.starts_with(project) {
                     if let Some(file) = ln_row.file(header) {
