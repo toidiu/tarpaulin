@@ -2,7 +2,7 @@ use process_handling::unix::*;
 use std::ffi::CString;
 use std::ptr;
 use std::mem::uninitialized;
-use nix::unistd::Pid;
+use nix::unistd::{Gid, Pid};
 use nix::Result;
 use nix::errno::Errno;
 use nix::libc::*;
@@ -12,15 +12,20 @@ const PTRACE_GETEVENTMSG: ReadType = 0x4201;
 
 const PTRACE_OPTIONS: ReadType = 0x7F;
 
+extern {
+    pub fn setegid(gid: gid_t) -> c_int;
+}
 
 pub fn trace_children(pid: Pid) -> Result<()> {
     // The options exist they're just hidden
     let res = unsafe {
+        Errno::clear();
         libc::ptrace(PTRACE_SETOPTIONS,
                      libc::pid_t::from(pid),
                      ptr::null_mut(),
                      PTRACE_OPTIONS)
     };
+    println!("trace children {:?}", res);
     Errno::result(res).map(drop)
 }
 
@@ -37,6 +42,10 @@ pub fn get_event_data(pid: Pid) -> Result<ReadType> {
 
 pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
     unsafe {
+        let egid_stat = setegid(Gid.current().as_raw());
+        if(egid_stat < 0) {
+            println!("Error setting egid");
+        }
         
         request_trace().expect("Failed to trace");
         
