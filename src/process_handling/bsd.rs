@@ -14,6 +14,7 @@ const PTRACE_OPTIONS: ReadType = 0x7F;
 
 
 
+
 pub fn trace_children(pid: Pid) -> Result<()> {
     // The options exist they're just hidden
     let res = unsafe {
@@ -38,6 +39,9 @@ pub fn get_event_data(pid: Pid) -> Result<ReadType> {
 
 pub fn execute(prog: CString, argv: &[CString], envar: &[CString]) {
     unsafe {
+        
+        request_trace().expect("Failed to trace");
+        
         let mut attr: posix_spawnattr_t = uninitialized();
         let res = posix_spawnattr_init(&mut attr);
         if res != 0 {
