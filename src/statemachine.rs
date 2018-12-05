@@ -195,6 +195,7 @@ impl <'a> StateData for LinuxData<'a> {
             println!("Failed to trace child threads");
         }
         let mut instrumented = true;
+        println!("Number of traces {}", self.traces.total_coverable());
         for trace in self.traces.all_traces() {
             if let Some(addr) = trace.address {
                 match Breakpoint::new(self.current, addr) {
@@ -218,9 +219,11 @@ impl <'a> StateData for LinuxData<'a> {
                         self.error_message = Some("Failed to instrument test executable".to_string());
                     },
                 }
-                println!("Finished instrumenting code");
+            } else {
+                println!("No address");
             }
         }
+        println!("Finished instrumenting code");
         if !instrumented {
             TestState::Abort
         }
