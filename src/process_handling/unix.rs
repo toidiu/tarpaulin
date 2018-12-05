@@ -71,4 +71,3 @@ pub fn set_instruction_pointer(pid: Pid, pc: u64) -> Result<()> {
 pub fn request_trace() -> Result<()> {
     traceme()
 }
-
