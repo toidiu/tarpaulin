@@ -132,13 +132,11 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
 {
     let ( cprog, seq) = prog.sequences()?;
     for s in seq {
-        println!("Checking sequence");
         let mut temp_map: HashMap<SourceLocation, TracerData> = HashMap::new();
         let mut sm = cprog.resume_from(&s);
          while let Ok(Some((header, &ln_row))) = sm.next_row() { 
             // If this row isn't useful move on
             if !ln_row.is_stmt() || ln_row.line().is_none() {
-                println!("Row isn't statement so continuing");
                 continue;
             }
             if let Some(file) = ln_row.file(header) {
@@ -160,7 +158,6 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
                 } else {
                     path.starts_with(project.join("target"))
                 };
-                println!("path is {}", path.display()); 
                 // Source is part of project so we cover it.
                 if !is_target && path.starts_with(project) {
                     if let Some(file) = ln_row.file(header) {
@@ -170,7 +167,6 @@ fn get_addresses_from_program<R, Offset>(prog: IncompleteLineNumberProgram<R>,
                             path.push(file.as_ref());
                             if !path.is_file() {
                                 // Not really a source file!
-                                println!("Not source");
                                 continue;
                             }
                             let address = ln_row.address();
