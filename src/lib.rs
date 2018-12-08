@@ -141,6 +141,7 @@ pub fn launch_tarpaulin(config: &Config) -> Result<(TraceMap, bool), RunError> {
     }
     let mut result = TraceMap::new();
     println!("Building project");
+    println!("Build config\n {:#?}", copt.build_config);
     let compilation = ops::compile(&workspace, &copt);
     let mut test_passed = true;
     match compilation {
