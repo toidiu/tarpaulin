@@ -247,7 +247,6 @@ fn get_line_addresses(endian: RunTimeEndian,
             };
             let prog = debug_line.program(offset, addr_size, None, None)?;
             let mut temp_map : HashMap<SourceLocation, Vec<TracerData>> = HashMap::new();
-            println!("Getting addresses");
             if let Err(e) = get_addresses_from_program(prog, &entries, project, &mut temp_map) {
                 if config.verbose {
                     println!("Potential issue reading test addresses {}", e);
@@ -281,7 +280,6 @@ fn get_line_addresses(endian: RunTimeEndian,
     println!("Processed all compilation units");
     for (file, ref line_analysis) in analysis.iter() {
         if config.exclude_path(file) {
-            println!("Excluding");
             continue;
         }
         for line in &line_analysis.cover {
@@ -299,9 +297,20 @@ fn get_line_addresses(endian: RunTimeEndian,
     Ok(result)
 }
 
+#[cfg(target_os = "linux")]
+fn open_symbols_file(test: &Path) -> io::Result<File> {
+    File::open(test)
+}
+
+#[cfg(target_os = "macos")]
+fn open_symbols_file(test: &Path) -> io::Result<File> {
+    let d_sym = test.with_extension("dSYM");
+    File::open(&d_sym)
+}
+
 pub fn generate_tracemap(project: &Workspace, test: &Path, config: &Config) -> io::Result<TraceMap> {
     let manifest = project.root();
-    let file = File::open(test)?;
+    let file = open_symbols_file(test)?;
     let file = unsafe {
         MmapOptions::new().map(&file)?
     };
