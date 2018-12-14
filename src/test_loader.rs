@@ -304,7 +304,9 @@ fn open_symbols_file(test: &Path) -> io::Result<File> {
 
 #[cfg(target_os = "macos")]
 fn open_symbols_file(test: &Path) -> io::Result<File> {
-    let d_sym = test.with_extension("dSYM");
+    let mut d_sym = test.with_extension("dSYM");
+    d_sym.push("Contents/Resources/DWARF");
+    d_sym.push(test.file_stem().unwrap());
     println!("Test file {}", d_sym.display());
     File::open(&d_sym)
 }
