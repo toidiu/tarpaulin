@@ -135,8 +135,7 @@ impl TestState {
 pub fn create_state_machine<'a>(test: Pid,
                                 traces: &'a mut TraceMap,
                                 config: &'a Config) -> (TestState, Data<'a>) {
-    let mut data = Data::new(traces, config);
-    data.parent = test;
+    let mut data = Data::new(traces, test, config);
     (TestState::start_state(), data)
 }
 

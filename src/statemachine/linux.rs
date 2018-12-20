@@ -195,7 +195,6 @@ impl <'a> StateData for Data<'a> {
         }
     }
 
-
     fn cleanup(&mut self)  {
         if let Some(ref e) = self.error_message {
             println!("An error occurred during run. Coverage results may be inaccurate.");
@@ -206,11 +205,13 @@ impl <'a> StateData for Data<'a> {
 
 
 impl <'a>Data<'a> {
-    pub fn new(traces: &'a mut TraceMap, config: &'a Config) -> Data<'a> {
+    pub fn new(traces: &'a mut TraceMap, 
+               parent: Pid, 
+               config: &'a Config) -> Data<'a> {
         Data {
             wait: WaitStatus::StillAlive,
             current: Pid::from_raw(0),
-            parent: Pid::from_raw(0),
+            parent: parent,
             breakpoints: HashMap::new(),
             traces,
             config,
