@@ -30,7 +30,11 @@ impl StateData for Data<'a> {
     }
     
     fn init(&mut self) -> TestState {
-        
+        let res = unsafe {
+            task_for_pid(mach_task_self(), 
+                         self.parent, 
+                         &mut self.port)
+        };
     }
     
     fn wait(&mut self) -> Option<TestState> {
@@ -55,6 +59,7 @@ impl <'a>Data<'a> {
         Data {
             wait: WaitStatus::StillAlive,
             parent: parent,
+            port: 0 as task_t,
             breakpoints: HashMap::new(),
             traces,
             config,

@@ -7,13 +7,13 @@ use traces::*;
 mod linux;
 
 #[cfg(target_os = "linux")]
-pub use linux::Data;
+pub use self::linux::Data;
 
 #[cfg(target_os = "macos")]
 mod mac;
 
 #[cfg(target_os = "macos")]
-pub use mac::Data;
+pub use self::mac::Data;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TestState {
@@ -135,7 +135,7 @@ impl TestState {
 pub fn create_state_machine<'a>(test: Pid,
                                 traces: &'a mut TraceMap,
                                 config: &'a Config) -> (TestState, Data<'a>) {
-    let mut data = Data::new(traces, test, config);
+    let data = Data::new(traces, test, config);
     (TestState::start_state(), data)
 }
 
