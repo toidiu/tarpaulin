@@ -13,16 +13,20 @@ lazy_static! {
 
 
 pub struct Report {
+    data: String,
 }
 
 impl Report {
 
-    pub fn render(config: &Config, traces: &TraceMap) -> Result<Self, Error> {
-        Err(Error::Unknown)
+    #[inline]
+    pub fn render(_config: &Config, traces: &TraceMap) -> Result<Self, Error> {
+        TERA.render("templates/report.html", traces)
+            .map(|s| Report { s })
+            .map_err(|| Error::Unknown)
     }
 
     pub fn export(&self, config: &Config) -> Result<(), Error> {
-        Err(Error::Unknown)
+
     }
 }
 
