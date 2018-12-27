@@ -1,5 +1,7 @@
 use nix::unistd::Pid;
 use mach::traps::{mach_task_self, task_for_pid};
+use mach::message::mach_msg;
+use mach::task::task_resume;
 use breakpoint::*;
 use traces::*;
 use process_handling::*;
@@ -35,10 +37,11 @@ impl StateData for Data<'a> {
                          self.parent, 
                          &mut self.port)
         };
+        // use vm_write to create the breakpoints
     }
     
     fn wait(&mut self) -> Option<TestState> {
-
+        // mach_message - wait for interrupt
     }
     
     fn stop(&mut self) -> TestState {

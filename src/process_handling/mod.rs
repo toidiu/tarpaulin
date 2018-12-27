@@ -11,7 +11,7 @@ mod bsd;
 pub use self::unix::*;
 
 #[cfg(target_os = "macos")]
-pub use self::bsd::*;
+pub use self::mac::*;
 
 #[cfg(target_os = "linux")]
 pub use self::linux::*;
