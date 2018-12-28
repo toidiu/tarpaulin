@@ -1,3 +1,4 @@
+#[warn(dead_code)]
 use std::error;
 use std::fmt;
 use std::fs::File;
@@ -149,12 +150,92 @@ impl Report {
         writer.write_event(Event::Start(cov))
             .map_err(|_| Error::ExportError)?;
 
+        self.export_header(&mut writer, config)
+            .map_err(|_| Error::ExportError)?;
+        
+        self.export_packages(&mut writer)
+            .map_err(|_| Error::ExportError)?;
+
         writer.write_event(Event::End(BytesEnd::borrowed(cov_tag)))
             .map_err(|_| Error::ExportError)?;
 
         let result = writer.into_inner().into_inner();
         file.write_all(&result)
             .map_err(|_| Error::ExportError)
+    }
+
+    fn export_header<T: Write>(&self, writer: &mut Writer<T>, config: &Config) -> Result<(), quick_xml::Error> {
+        let sources_tag = b"sources";
+        let source_tag = b"source";
+        writer.write_event(Event::Start(BytesStart::borrowed(sources_tag, sources_tag.len())))?;
+        for source in self.sources.iter() {
+            if let Some(ref path) = source.to_str() {
+                writer.write_event(Event::Start(BytesStart::borrowed(source_tag, source_tag.len())))?;
+                writer.write(path.as_bytes())?;
+                writer.write_event(Event::End(BytesEnd::borrowed(source_tag)))?;
+            }
+        }
+        writer.write_event(Event::End(BytesEnd::borrowed(sources_tag)))
+            .map(|_| ())
+    }
+
+    fn export_packages<T: Write>(&self, writer: &mut Writer<T>) -> Result<(), quick_xml::Error> {
+        let packages_tag = b"packages";
+        let pack_tag = b"package";
+
+        writer.write_event(Event::Start(BytesStart::borrowed(packages_tag, packages_tag.len())))?;
+        // Export the package
+        for package in &self.packages {
+            let mut pack = BytesStart::borrowed(pack_tag, pack_tag.len());
+            pack.push_attribute(("line-rate", package.line_rate.to_string().as_ref()));
+            pack.push_attribute(("branch-rate", package.branch_rate.to_string().as_ref()));
+            pack.push_attribute(("complexity", package.complexity.to_string().as_ref()));
+            
+            writer.write_event(Event::Start(pack))?;
+            self.export_classes(&package.classes, writer)?;
+            writer.write_event(Event::End(BytesEnd::borrowed(pack_tag)))?;
+        }
+
+        writer.write_event(Event::End(BytesEnd::borrowed(packages_tag)))
+            .map(|_| ())
+    }
+
+    fn export_classes<T: Write>(&self, classes: &[Class], writer: &mut Writer<T>) -> Result<(), quick_xml::Error> {
+        let classes_tag = b"classes";
+        let class_tag = b"class";
+        let methods_tag = b"methods";
+
+        writer.write_event(Event::Start(BytesStart::borrowed(classes_tag, classes_tag.len())))?;
+        for class in classes {
+            let mut c = BytesStart::borrowed(class_tag, class_tag.len());
+
+            writer.write_event(Event::Start(c))?;
+            writer.write_event(Event::Empty(BytesStart::borrowed(methods_tag, methods_tag.len())))?;
+            self.export_lines(&class.lines, writer)?;
+            writer.write_event(Event::End(BytesEnd::borrowed(class_tag)))?;
+        }
+        writer.write_event(Event::End(BytesEnd::borrowed(classes_tag)))
+            .map(|_| ())
+    }
+
+    fn export_lines<T: Write>(&self, lines: &[Line], writer: &mut Writer<T>) -> Result<(), quick_xml::Error> {
+        let lines_tag = b"lines";
+        let line_tag = b"line";
+
+        writer.write_event(Event::Start(BytesStart::borrowed(lines_tag, lines_tag.len())))?;
+        for line in lines {
+            let mut l = BytesStart::borrowed(line_tag, line_tag.len());
+            match line {
+                Line::Plain{ref number, ref hits} => {
+                    l.push_attribute(("number", number.to_string().as_ref()));
+                    l.push_attribute(("hits", hits.to_string().as_ref()));
+                },
+                Line::Branch{..} => {},
+            }
+            writer.write_event(Event::Empty(l))?;
+        }
+        writer.write_event(Event::End(BytesEnd::borrowed(lines_tag)))
+            .map(|_| ())
     }
 }
 
@@ -274,11 +355,11 @@ struct Method {
 }
 
 fn render_methods() -> Vec<Method> {
-    panic!("Not yet implemented")
+    unimplemented!()
 }
 
 fn render_method() -> Method {
-    panic!("Not yet implemented")
+    unimplemented!()
 }
 
 
