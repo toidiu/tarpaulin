@@ -9,6 +9,10 @@ use coveralls_api::*;
 use config::{Config};
 use traces::{TraceMap, CoverageStat};
 
+pub fn report(config: &Config, traces: &TraceMap) -> Result<(), Error> {
+    let mut report = Report::render(config, traces)?;
+    report.export(config)
+}
 
 fn get_coveralls_id(config: &Config) -> Result<Identity, Error> {
     let key = config.coveralls.clone().ok_or(Error::NoKey)?;
@@ -44,11 +48,10 @@ impl Report {
 
             for cov in file_cov {
                 match cov.stats {
-                    CoverageStat::Line(hits)    => {
+                    CoverageStat::Line(hits) => {
                         lines.insert(cov.line as usize, hits as usize);
                     },
-
-                    _                           => {
+                    _ => {
                         // TODO: Support other coverage stats
                         println!("Unsupported coverage statistic");
                     },
@@ -65,12 +68,11 @@ impl Report {
 
     pub fn export(&mut self, config: &Config) -> Result<(), Error> {
         match config.report_uri {
-            Some(ref uri)   => {
+            Some(ref uri) => {
                 println!("Sending report to {}", uri);
                 self.report.send_to_endpoint(uri).map_err(Error::Export)
             },
-
-            None            => {
+            None => {
                 println!("Sending report to coveralls.io");
                 self.report.send_to_coveralls().map_err(Error::Export)
             },

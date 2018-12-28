@@ -1,6 +1,11 @@
 use std::error;
 use std::fmt;
+use std::fs::File;
+use std::io::{Cursor, Write};
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::{Path, PathBuf};
+
+use quick_xml::{Writer, events::{BytesDecl, BytesEnd, BytesStart, Event}};
 
 use chrono::offset::{Utc};
 
@@ -47,9 +52,16 @@ use traces::{CoverageStat, Trace, TraceMap};
 // </coverage>
 
 
+pub fn report(config: &Config, traces: &TraceMap) -> Result<(), Error> {
+    let result = Report::render(config, traces)?;
+    result.export(config)
+}
+
+
 #[derive(Debug)]
 pub enum Error {
     Unknown,
+    ExportError,
 }
 
 impl error::Error for Error {
@@ -57,6 +69,7 @@ impl error::Error for Error {
     #[inline]
     fn description(&self) -> &str {
         match self {
+            Error::ExportError => "Export Error",
             Error::Unknown => "Unknown Error",
         }
     }
@@ -73,7 +86,8 @@ impl fmt::Display for Error {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::Unknown => write!(f, "Unknown Error")
+            Error::ExportError => write!(f, "Export Error"),
+            Error::Unknown => write!(f, "Unknown Error"),
         }
     }
 }
@@ -90,21 +104,19 @@ pub struct Report {
 
 impl Report {
 
-    fn render(config: &Config, traces: &TraceMap) -> Result<Self, Error> {
+    pub fn render(config: &Config, traces: &TraceMap) -> Result<Self, Error> {
         let timestamp   = Utc::now().timestamp();
         let sources     = render_sources(config);
         let packages    = render_packages(config, traces);
-        let line_rate   = 0.0;
-        let branch_rate = 0.0;
+        let mut line_rate   = 0.0;
+        let mut branch_rate = 0.0;
 
-        /*
         if packages.len() > 0 {
             line_rate   = packages.iter()
-                .map(|x| x.line_rate).sum() / packages.len() as f64;
+                .map(|x| x.line_rate).sum::<f64>() / packages.len() as f64;
             branch_rate = packages.iter()
-                .map(|x| x.branch_rate).sum() / packages.len() as f64;
+                .map(|x| x.branch_rate).sum::<f64>() / packages.len() as f64;
         }
-        */
 
         Ok(Report {
             timestamp:      timestamp,
@@ -115,9 +127,34 @@ impl Report {
         })
     }
 
-    fn export(&self, config: &Config) -> Result<(), Error> {
-        // TODO: Convert the report structure to XML and write to file
-        panic!("Not implemented")
+    pub fn export(&self, config: &Config) -> Result<(), Error> {
+        let mut file = File::create("cobertura.xml")
+            .map_err(|_| Error::ExportError)?;
+
+        let mut writer = Writer::new(Cursor::new(vec![]));
+        writer.write_event(Event::Decl(BytesDecl::new(b"1.0", None, None)))
+            .map_err(|_| Error::ExportError)?;
+       
+        let cov_tag = b"coverage";
+        let mut cov = BytesStart::borrowed(cov_tag, cov_tag.len());
+        cov.push_attribute(("line-rate", self.line_rate.to_string().as_ref()));
+        cov.push_attribute(("branch-rate", self.branch_rate.to_string().as_ref()));
+        cov.push_attribute(("version", "1.9"));
+        let secs = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(s) => s.as_secs().to_string(),
+            Err(_) => String::from("0"),
+        };
+        cov.push_attribute(("timestamp", secs.as_ref()));
+        
+        writer.write_event(Event::Start(cov))
+            .map_err(|_| Error::ExportError)?;
+
+        writer.write_event(Event::End(BytesEnd::borrowed(cov_tag)))
+            .map_err(|_| Error::ExportError)?;
+
+        let result = writer.into_inner().into_inner();
+        file.write_all(&result)
+            .map_err(|_| Error::ExportError)
     }
 }
 
@@ -282,8 +319,7 @@ struct Condition {
 }
 
 
-// TODO: Are there other condition types?
-//
+// Condition types
 #[derive(Debug)]
 enum ConditionType {
     Jump,

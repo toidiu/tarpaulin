@@ -59,9 +59,7 @@ fn report_verbose(handle: &mut StdoutLock, config: &Config, traces: &TraceMap) -
             match v.stats {
                 CoverageStat::Line(x) if x == 0 =>
                     uncovered.push(v.line),
-
-                _                               =>
-                    (),
+                _ => (),
             }
         }
 

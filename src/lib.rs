@@ -12,6 +12,7 @@ extern crate memmap;
 extern crate nix;
 extern crate object;
 extern crate proc_macro2;
+extern crate quick_xml;
 extern crate regex;
 extern crate rustc_demangle;
 extern crate serde;
@@ -163,9 +164,9 @@ fn setup_environment() {
 pub fn report_coverage(config: &Config, result: &TraceMap) {
     for format in &config.generate {
         match *format {
-            Format::Cobertura   => println!("Render Cobertura"),
-            Format::Coveralls   => println!("Render Coveralls"),
-            Format::Html        => println!("Render HTML"),
+            Format::Cobertura   => reporting::cobertura::report(config, result).unwrap(),
+            Format::Coveralls   => reporting::coveralls::report(config, result).unwrap(),
+            Format::Html        => reporting::html::report(config, result).unwrap(),
             Format::Stdout      => reporting::stdout::report(config, result).unwrap(),
         }
     }
