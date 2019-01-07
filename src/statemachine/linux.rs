@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::time::Instant;
 use nix::Error as NixErr;
 use nix::sys::wait::*;
 use nix::sys::signal::Signal;
@@ -10,143 +9,16 @@ use breakpoint::*;
 use traces::*;
 use process_handling::*;
 use config::Config;
-
-
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum TestState {
-    /// Start state. Wait for test to appear and track time to enable timeout
-    Start {
-        start_time: Instant,
-    },
-    /// Initialise: once test process appears instrument
-    Initialise ,
-    /// Waiting for breakpoint to be hit or test to end
-    Waiting {
-        start_time: Instant,
-    },
-    /// Test process stopped, check coverage
-    Stopped,
-    /// Process timed out
-    Timeout,
-    /// Unrecoverable error occurred
-    Unrecoverable,
-    /// Test exited normally. Includes the exit code of the test executable.
-    End(i32),
-    /// An error occurred that indicates no future runs will succeed such as
-    /// PIE issues in OS.
-    Abort,
-}
-
-/// Tracing a process on an OS will have platform specific code.
-/// Structs containing the platform specific datastructures should
-/// provide this trait with an implementation of the handling of
-/// the given states.
-pub trait StateData {
-    /// Starts the tracing. Returns None while waiting for
-    /// start. Statemachine then checks timeout
-    fn start(&mut self) -> Option<TestState>;
-    /// Initialises test for tracing returns next state
-    fn init(&mut self) -> TestState;
-    /// Waits for notification from test executable that there's
-    /// something to do. Selects the next appropriate state if there's
-    /// something to do otherwise None
-    fn wait(&mut self) -> Option<TestState>;
-    /// Handle a stop in the test executable. Coverage data will
-    /// be collected here as well as other OS specific functions
-    fn stop(&mut self) -> TestState;
-    /// Cleanup the system state - killing processes etc
-    fn cleanup(&mut self);
-}
-
-
-impl TestState {
-    /// Convenience function used to check if the test has finished or errored
-    pub fn is_finished(self) -> bool {
-        match self {
-            TestState::End(_) | TestState::Unrecoverable | TestState::Abort => true,
-            _ => false,
-        }
-    }
-
-    /// Convenience function for creating start states
-    fn start_state() -> TestState {
-        TestState::Start{start_time: Instant::now()}
-    }
-
-    /// Convenience function for creating wait states
-    fn wait_state() -> TestState {
-        TestState::Waiting{start_time: Instant::now()}
-    }
-
-    /// Updates the state machine state
-    pub fn step<T:StateData>(self, data: &mut T, config: &Config) -> TestState {
-        match self {
-            TestState::Start{start_time} => {
-                if let Some(s) = data.start() {
-                    s
-                } else if start_time.elapsed() >= config.test_timeout {
-                    println!("Error: Timed out when starting test");
-                    TestState::Timeout
-                } else {
-                    TestState::Start{start_time}
-                }
-            },
-            TestState::Initialise => {
-                data.init()
-            },
-            TestState::Waiting{start_time} => {
-                if let Some(s) =data.wait() {
-                    s
-                } else if start_time.elapsed() >= config.test_timeout {
-                    println!("Error: Timed out waiting for test response");
-                    TestState::Timeout
-                } else {
-                    TestState::Waiting{start_time}
-                }
-            },
-            TestState::Stopped => {
-                data.stop()
-            },
-            TestState::Timeout => {
-                data.cleanup();
-                // Test hasn't ran all the way through. Report as error
-                TestState::End(-1)
-            },
-            TestState::Unrecoverable => {
-                data.cleanup();
-                // We've gone wrong somewhere. Better report it as an issue
-                TestState::End(-1)
-            },
-            _ => {
-                // Unhandled
-                if config.verbose {
-                    println!("Tarpaulin error: unhandled test state");
-                }
-                TestState::End(-1)
-            }
-        }
-    }
-}
-
-
-pub fn create_state_machine<'a>(test: Pid,
-                                traces: &'a mut TraceMap,
-                                config: &'a Config) -> (TestState, LinuxData<'a>) {
-    let mut data = LinuxData::new(traces, config);
-    data.parent = test;
-    (TestState::start_state(), data)
-}
-
+use statemachine::{StateData, TestState};
 
 /// Handle to linux process state
-pub struct LinuxData<'a> {
+pub struct Data<'a> {
     /// Recent result from waitpid to be handled by statemachine
     wait: WaitStatus,
     /// Current Pid to process
-    current: Pid,
+    pub(crate) current: Pid,
     /// Parent PID of test process
-    parent: Pid,
+    pub(crate) parent: Pid,
     /// Map of addresses to breakpoints
     breakpoints: HashMap<u64, Breakpoint>,
     /// Instrumentation points in code with associated coverage data
@@ -162,7 +34,7 @@ pub struct LinuxData<'a> {
 }
 
 
-impl <'a> StateData for LinuxData<'a> {
+impl <'a> StateData for Data<'a> {
 
     fn start(&mut self) -> Option<TestState> {
         match waitpid(self.current, Some(WaitPidFlag::WNOHANG)) {
@@ -236,12 +108,8 @@ impl <'a> StateData for LinuxData<'a> {
 
 
     fn wait(&mut self) -> Option<TestState> {
-        #[cfg(target_os = "macos")]
-        let wait_flag: WaitPidFlag = WaitPidFlag::WNOHANG;
-        #[cfg(target_os = "linux")]
         let wait_flag: WaitPidFlag = WaitPidFlag::WNOHANG | WaitPidFlag::__WALL;
-        let wait = waitpid(Pid::from_raw(-1), Some(wait_flag));
-        match wait {
+        match waitpid(Pid::from_raw(-1), Some(wait_flag)) {
             Ok(WaitStatus::StillAlive) => {
                 self.wait = WaitStatus::StillAlive;
                 None
@@ -327,7 +195,6 @@ impl <'a> StateData for LinuxData<'a> {
         }
     }
 
-
     fn cleanup(&mut self)  {
         if let Some(ref e) = self.error_message {
             println!("An error occurred during run. Coverage results may be inaccurate.");
@@ -337,12 +204,14 @@ impl <'a> StateData for LinuxData<'a> {
 }
 
 
-impl <'a>LinuxData<'a> {
-    pub fn new(traces: &'a mut TraceMap, config: &'a Config) -> LinuxData<'a> {
-        LinuxData {
+impl <'a>Data<'a> {
+    pub fn new(traces: &'a mut TraceMap, 
+               parent: Pid, 
+               config: &'a Config) -> Data<'a> {
+        Data {
             wait: WaitStatus::StillAlive,
             current: Pid::from_raw(0),
-            parent: Pid::from_raw(0),
+            parent: parent,
             breakpoints: HashMap::new(),
             traces,
             config,
