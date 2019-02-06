@@ -2,6 +2,7 @@ use crate::ptrace_control::*;
 use nix::unistd::Pid;
 use nix::{Error, Result};
 use std::collections::HashMap;
+use log::trace;
 
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 const INT: u64 = 0xCC;
@@ -28,6 +29,8 @@ impl Breakpoint {
     pub fn new(pid: Pid, pc: u64) -> Result<Breakpoint> {
         let aligned = pc & !0x7u64;
         let data = read_address(pid, aligned)?;
+        trace!("Creating breakpoint - address 0x{:x} aligned address 0x{:x} data 0x{:x}", 
+               pc, aligned, data);
         let shift = 8 * (pc - aligned);
         let data = ((data >> shift) & 0xFF) as u8;
 
@@ -38,7 +41,11 @@ impl Breakpoint {
             is_running: HashMap::new(),
         };
         match b.enable(pid) {
-            Ok(_) => Ok(b),
+            Ok(_) => {
+                let data = read_address(pid, b.aligned_address())?;
+                trace!("With breakpoint data is 0x{:x}", data);
+                Ok(b)
+            },
             Err(e) => Err(e),
         }
     }

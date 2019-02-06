@@ -247,11 +247,21 @@ impl<'a> StateData for LinuxData<'a> {
                     ))),
                 }
             },
-            WaitStatus::Stopped(_, Signal::SIGSEGV) => Err(RunError::TestRuntime(
-                "A segfault occurred while executing tests".to_string(),
-            )),
+            WaitStatus::Stopped(child, Signal::SIGSEGV) => {
+                if let Ok(rip) = current_instruction_pointer(child) {
+                    trace!("SIGSEGV raised at 0x{:x}", rip);
+                }
+                Err(RunError::TestRuntime("A segfault occurred while executing tests".to_string()))
+            },
             WaitStatus::Stopped(child, Signal::SIGILL) => {
-                Err(RunError::TestRuntime(format!("Error running test - SIGILL raised in {}", child)))
+                if let Ok(rip) = current_instruction_pointer(child) {
+                    trace!("SIGILL raised by {} at 0x{:x}", child, rip);
+                    let aligned = (rip as u64) & !0x7u64;
+                    if let Ok(data) = read_address(child, aligned) {
+                        trace!("Data at 0x{:x} is 0x{:x}", aligned, data);
+                    }
+                }
+                Err(RunError::TestRuntime(format!("Error running test - SIGILL raised during run")))
             },
             WaitStatus::Stopped(c, s) => {
                 let sig = if self.config.forward_signals {
@@ -341,9 +351,11 @@ impl<'a> LinuxData<'a> {
                     Ok(TestState::wait_state())
                 }
                 PTRACE_EVENT_EXIT => {
-                    trace!("Child exiting");
+                    trace!("Child {} exiting", child);
                     self.thread_count -= 1;
-                    continue_exec(child, None)?;
+                    if let Err(e) = continue_exec(child, None) {
+                        trace!("{:?} when attempting to continue from event", e);
+                    }
                     Ok(TestState::wait_state())
                 }
                 _ => Err(RunError::TestRuntime(format!(
@@ -391,6 +403,7 @@ impl<'a> LinuxData<'a> {
                 continue_exec(self.current, None)?;
             }
         } else {
+            trace!("Wasn't able to get program counter");
             continue_exec(self.current, None)?;
         }
         Ok(TestState::wait_state())
